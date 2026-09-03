@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { makeTransformStampedMessage } from "./ros.js";
+import { makeAxesHelper } from "./axes_helper.js";
 
 const AXIS_SIZE = 0.15;
 
@@ -61,7 +62,7 @@ export class Frame {
     this.dragDirection = null; // last drag direction (world space), for context-menu realign
 
     this.group = new THREE.Group();
-    this.group.add(new THREE.AxesHelper(AXIS_SIZE));
+    this.group.add(makeAxesHelper(AXIS_SIZE, 4));
     this.group.add(makeLabelSprite(name));
   }
 

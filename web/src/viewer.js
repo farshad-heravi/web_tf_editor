@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { TransformControls } from "three/examples/jsm/controls/TransformControls.js";
+import { setAxesResolution } from "./axes_helper.js";
 
 /**
  * Owns the three.js scene, camera, renderer, orbit/transform controls and the render loop.
@@ -71,6 +72,7 @@ export class Viewer {
     this.camera.aspect = w / Math.max(h, 1);
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(w, h, false);
+    setAxesResolution(w, h);
   }
 
   _animate() {
