@@ -1,0 +1,50 @@
+name: web_tf_editor
+
+services:
+  interactive_frame:
+    build: .
+    # Host networking so DDS discovery (SPDP multicast) can reach other host-networked ROS 2
+    # containers, e.g. renee_simulation, which publishes /robot/robot_description. This means the
+    # `ports:` mapping below no longer applies: the container binds host ports 8080/9090 directly.
+    network_mode: host
+    environment:
+      - ROS_DOMAIN_ID=0
+      - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+      # SPDP multicast discovery is unreliable on this host (too many unrelated Docker bridge
+      # networks confuse interface auto-selection), so pin CycloneDDS to loopback unicast
+      # discovery instead. Must match the CYCLONEDDS_URI used by renee_simulation's containers.
+      - CYCLONEDDS_URI=<CycloneDDS><Domain><General><Interfaces><NetworkInterface name="lo"/></Interfaces><AllowMulticast>false</AllowMulticast></General><Discovery><Peers><Peer address="127.0.0.1"/></Peers></Discovery></Domain></CycloneDDS>
+    volumes:
+      - ./web:/ws/src/web_tf_editor/web:ro
+      # Meshes for robots whose description package isn't baked into this image: drop or symlink
+      # <pkg_name>/... dirs here (e.g. `docker cp <robot_container>:/opt/ros/jazzy/share/<pkg>
+      # ./mesh_packages/`) and they resolve at http://.../package/<pkg_name>/... with no rebuild.
+      - ./mesh_packages:/mesh_packages:ro
+    command: [
+      # Host port 8080 is already taken by Jenkins on this machine, so the web UI moves to 8180.
+      "http_port:=8180",
+      "ros_bridge_public_url:=ws://localhost:9090",
+      # colcon --symlink-install links the installed web/ to its own build/ copy, not straight
+      # back to src/, so point the server at the bind-mounted src tree directly: this is what
+      # actually makes "edit web/, npm run build, refresh the page" work without a docker rebuild.
+      "web_root:=/ws/src/web_tf_editor/web",
+      "mesh_search_paths:=/mesh_packages",
+    ]
+
+  # Standalone UR5e description publisher that interactive_frame can "Load robot from topic"
+  # against, rather than relying on a real robot/sim being up. Publishes /ur5e/robot_description
+  # (latched) and /ur5e/joint_states; /tf and /tf_static stay global/unnamespaced.
+  # NB: /robot/robot_description and /robot/joint_states are already used on this host by
+  # renee_simulation's Robotnik+UR mobile manipulator -- don't repoint topic_namespace at "robot".
+  ur5e_description:
+    build: ./docker/ur5e_description
+    # Same host-networking + loopback-unicast CycloneDDS setup as interactive_frame above, so the
+    # two containers can discover each other over DDS.
+    network_mode: host
+    environment:
+      - ROS_DOMAIN_ID=0
+      - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+      - CYCLONEDDS_URI=<CycloneDDS><Domain><General><Interfaces><NetworkInterface name="lo"/></Interfaces><AllowMulticast>false</AllowMulticast></General><Discovery><Peers><Peer address="127.0.0.1"/></Peers></Discovery></Domain></CycloneDDS>
+    command: [
+      "ur_type:=ur5e",
+    ]

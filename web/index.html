@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Interactive Frame JS</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <div id="app">
+    <header id="header">
+      <span id="conn-status" class="status status-disconnected">disconnected</span>
+      <span id="robot-name">robot: —</span>
+      <span id="joint-count">joints: —</span>
+      <button id="add-frame-btn" title="Add frame (A)">+ Frame</button>
+    </header>
+    <div id="viewport-container">
+      <canvas id="viewport"></canvas>
+      <div id="shortcut-help" class="shortcut-help"></div>
+      <div id="hint" class="hint"></div>
+      <div id="context-menu" class="context-menu" hidden></div>
+    </div>
+    <aside id="panel">
+      <div id="robot-section" class="robot-section"></div>
+      <div id="frame-list"></div>
+      <div id="frame-editor" hidden></div>
+    </aside>
+  </div>
+  <script src="/dist/bundle.js"></script>
+</body>
+</html>

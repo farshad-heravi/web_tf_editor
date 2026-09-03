@@ -1,0 +1,10 @@
+web/node_modules/
+web/dist/
+build/
+install/
+log/
+*.pyc
+__pycache__/
+mesh_packages/*
+!mesh_packages/.gitkeep
+.vscode/

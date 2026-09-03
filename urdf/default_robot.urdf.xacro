@@ -1,0 +1,43 @@
+<?xml version="1.0"?>
+<!--
+  Thin wrapper around turtlebot3_manipulation_description's robot xacro, for use as this
+  package's default viewer robot.
+
+  The upstream turtlebot3_manipulation.urdf.xacro ends with an unconditional
+  <gazebo><plugin gazebo_ros2_control>...$(find turtlebot3_manipulation_bringup)...</plugin></gazebo>
+  block. xacro resolves $(find ...) at parse time regardless of whether the element is otherwise
+  used, so that block fails to process unless ros-jazzy-turtlebot3-manipulation-bringup (and its
+  ~20-package ros2_control/Gazebo dependency chain) is installed. This viewer never runs Gazebo,
+  so we reproduce the same includes/macros here and simply omit that block instead of pulling in
+  the extra dependency footprint.
+-->
+<robot name="turtlebot3_manipulation" xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <xacro:arg name="prefix" default="" />
+  <xacro:arg name="use_sim" default="false" />
+  <xacro:arg name="use_fake_hardware" default="false" />
+  <xacro:arg name="fake_sensor_commands" default="false" />
+
+  <xacro:include filename="$(find turtlebot3_manipulation_description)/gazebo/materials.xacro" />
+  <xacro:include filename="$(find turtlebot3_manipulation_description)/urdf/turtlebot3_waffle_pi.urdf.xacro" />
+  <xacro:include filename="$(find turtlebot3_manipulation_description)/gazebo/turtlebot3_waffle_pi.gazebo.xacro" />
+  <xacro:include filename="$(find turtlebot3_manipulation_description)/urdf/open_manipulator_x.urdf.xacro" />
+  <xacro:include filename="$(find turtlebot3_manipulation_description)/gazebo/open_manipulator_x.gazebo.xacro" />
+  <xacro:include filename="$(find turtlebot3_manipulation_description)/ros2_control/turtlebot3_manipulation_system.ros2_control.xacro" />
+
+  <xacro:turtlebot3_waffle_pi prefix="$(arg prefix)" />
+  <xacro:turtlebot3_waffle_pi_gazebo prefix="$(arg prefix)" />
+
+  <joint name="$(arg prefix)base_fixed" type="fixed">
+    <parent link="$(arg prefix)base_link"/>
+    <child link="$(arg prefix)link1"/>
+    <origin xyz="-0.092 0.0 0.091" rpy="0 0 0"/>
+  </joint>
+
+  <xacro:open_manipulator_x prefix="$(arg prefix)" />
+  <xacro:open_manipulator_x_gazebo prefix="$(arg prefix)" />
+
+  <xacro:turtlebot3_manipulation_system
+    name="TurtleBot3ManipulationSystem" prefix="$(arg prefix)" use_sim="$(arg use_sim)"
+    use_fake_hardware="$(arg use_fake_hardware)"
+    fake_sensor_commands="$(arg fake_sensor_commands)"/>
+</robot>
