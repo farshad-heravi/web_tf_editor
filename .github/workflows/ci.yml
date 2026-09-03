@@ -47,6 +47,9 @@ jobs:
         with:
           package-name: web_tf_editor
           target-ros2-distro: ${{ matrix.ros_distro }}
+          # Repo is private -- action-ros-ci clones it fresh itself rather than reusing the
+          # actions/checkout copy, so it needs its own auth.
+          import-token: ${{ secrets.GITHUB_TOKEN }}
 
   web-build:
     name: web bundle (lint-speed check)
