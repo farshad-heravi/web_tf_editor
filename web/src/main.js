@@ -207,7 +207,11 @@ async function main() {
     raycaster.set(rc.ray.origin, rc.ray.direction);
     raycaster.camera = viewer.camera;
     const hits = raycaster.intersectObject(viewer.framesRoot, true);
-    if (hits.length === 0) return;
+    if (hits.length === 0) {
+      frameManager.select(null);
+      panel.hideContextMenu();
+      return;
+    }
 
     let obj = hits[0].object;
     while (obj && obj.parent !== viewer.framesRoot) obj = obj.parent;
