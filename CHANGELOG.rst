@@ -2,8 +2,8 @@
 Changelog for package web_tf_editor
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.1.1 (2026-09-04)
+------------------
 * Deselect frame on right-click in empty space
 * Dim non-selected frames and highlight the selected frame's label in the 3D view
 * Add D shortcut to duplicate the selected frame, offset along its X axis
