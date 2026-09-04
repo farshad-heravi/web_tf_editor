@@ -181,16 +181,6 @@ async function main() {
 
     if (e.key === "a" || e.key === "A") {
       toggleAddMode();
-    } else if (e.key === "t" || e.key === "T") {
-      if (frameManager.selected) {
-        viewer.transformControls.setMode("translate");
-        shortcutHelp.render();
-      }
-    } else if (e.key === "r" || e.key === "R") {
-      if (frameManager.selected) {
-        viewer.transformControls.setMode("rotate");
-        shortcutHelp.render();
-      }
     } else if (e.key === "g" || e.key === "G") {
       if (frameManager.selected) {
         if (frameManager.gizmoOn) {

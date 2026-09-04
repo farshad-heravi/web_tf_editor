@@ -11,10 +11,9 @@ const SELECTED_ROWS = [
   { label: "Right-click frame for rename, delete…" },
 ];
 
-function gizmoRows(mode, space) {
+function gizmoRows(space) {
   return [
-    { key: "T", label: "Translate", active: mode === "translate" },
-    { key: "R", label: "Rotate", active: mode === "rotate" },
+    { label: "Drag an arrow to move, a ring to rotate" },
     { key: "Q", label: `Space: ${space === "local" ? "Local" : "World"}` },
     { key: "G", label: "Hide gizmo" },
     { key: "Esc", label: "Deselect" },
@@ -41,7 +40,7 @@ export class ShortcutHelp {
       rows = ADD_FRAME_ROWS;
     } else if (this.frameManager.selected && this.frameManager.gizmoOn) {
       title = "Gizmo";
-      rows = gizmoRows(this.viewer.transformControls.mode, this.viewer.transformControls.space);
+      rows = gizmoRows(this.viewer.transformControls.space);
     } else if (this.frameManager.selected) {
       title = "Frame selected";
       rows = SELECTED_ROWS;

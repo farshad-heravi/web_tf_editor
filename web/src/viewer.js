@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
-import { TransformControls } from "three/examples/jsm/controls/TransformControls.js";
+import { TransformControls } from "./vendor/TransformControls.js";
 import { setAxesResolution } from "./axes_helper.js";
 
 /**
@@ -25,6 +25,11 @@ export class Viewer {
     this.orbit.dampingFactor = 0.1;
 
     this.transformControls = new TransformControls(this.camera, this.renderer.domElement);
+    // MoveIt/RViz-style interactive marker: no free/screen-space rotate rings.
+    // (Plane-translate squares are dropped at the source level in the fork rather
+    // than hidden here, since their handle name overlaps the free-move sphere's.)
+    this.transformControls.showE = false;
+    this.transformControls.showXYZE = false;
     this.transformControls.addEventListener("dragging-changed", (e) => {
       this.orbit.enabled = !e.value;
     });
