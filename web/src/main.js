@@ -7,6 +7,7 @@ import { FrameManager } from "./frames.js";
 import { Picker } from "./picker.js";
 import { Panel } from "./panel.js";
 import { ShortcutHelp } from "./shortcuts.js";
+import { ViewCube } from "./view_cube.js";
 
 const BASE_FRAME_CANDIDATES = ["base_footprint", "base_link"];
 
@@ -121,6 +122,7 @@ async function main() {
     onSpaceToggle: () => shortcutHelp.render(),
   });
   const picker = new Picker({ viewer, frameManager, hintEl: document.getElementById("hint") });
+  new ViewCube({ viewer, canvas: document.getElementById("view-cube") });
 
   const shortcutHelp = new ShortcutHelp({
     el: document.getElementById("shortcut-help"),
