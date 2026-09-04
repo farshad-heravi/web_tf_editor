@@ -1,3 +1,26 @@
+## web_tf_editor (jazzy) - 0.1.1-1
+
+The packages in the `web_tf_editor` repository were released into the `jazzy` distro by running `/usr/bin/bloom-release --rosdistro jazzy --track jazzy web_tf_editor` on `Fri, 04 Sep 2026 17:40:48 -0000`
+
+The `web_tf_editor` package was released.
+
+Version of package(s) in repository `web_tf_editor`:
+
+- upstream repository: https://github.com/farshad-heravi/web_tf_editor.git
+- release repository: unknown
+- rosdistro version: `null`
+- old version: `null`
+- new version: `0.1.1-1`
+
+Versions of tools used:
+
+- bloom version: `0.14.3`
+- catkin_pkg version: `1.1.0`
+- rosdep version: `0.26.0`
+- rosdistro version: `1.0.1`
+- vcstools version: `0.1.42`
+
+
 # web_tf_editor
 
 Browser-based, rviz-like viewer for ROS 2 Jazzy: renders a robot's URDF, lets you orbit/pan/zoom,
