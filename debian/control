@@ -1,0 +1,12 @@
+Source: ros-jazzy-web-tf-editor
+Section: misc
+Priority: optional
+Maintainer: "Farshad Nozad Heravi" <f.n.heravi@gmail.com>
+Build-Depends: debhelper (>= 9.0.0), python3-pytest <!nocheck>, ros-jazzy-ament-copyright <!nocheck>, ros-jazzy-ament-flake8 <!nocheck>, ros-jazzy-ament-index-python, ros-jazzy-ament-pep257 <!nocheck>, ros-jazzy-geometry-msgs, ros-jazzy-rclpy, ros-jazzy-std-msgs, ros-jazzy-tf2-ros, ros-jazzy-ros-workspace, python3-all, python3-setuptools, dh-python
+Homepage: https://index.ros.org/p/web_tf_editor/#jazzy
+Standards-Version: 3.9.2
+
+Package: ros-jazzy-web-tf-editor
+Architecture: any
+Depends: ${python3:Depends}, ${misc:Depends}, ros-jazzy-ament-index-python, ros-jazzy-geometry-msgs, ros-jazzy-joint-state-publisher, ros-jazzy-rclpy, ros-jazzy-robot-state-publisher, ros-jazzy-rosbridge-suite, ros-jazzy-std-msgs, ros-jazzy-tf2-ros, ros-jazzy-xacro, ros-jazzy-ros-workspace
+Description: Browser-based rviz-like viewer for authoring interactive TF frames over rosbridge.
