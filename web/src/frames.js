@@ -4,15 +4,27 @@ import { makeAxesHelper } from "./axes_helper.js";
 
 const AXIS_SIZE = 0.15;
 const DUPLICATE_OFFSET = AXIS_SIZE * 2;
+const DIM_OPACITY = 0.55;
+const ACCENT_COLOR = "#4da3ff"; // matches --accent / --axis-z in style.css
+const ACCENT_TEXT_COLOR = "#1b1e23"; // matches --bg, for contrast on the accent pill
 
-function makeLabelSprite(text) {
+function makeLabelSprite(text, highlighted = false) {
   const canvas = document.createElement("canvas");
   canvas.width = 256;
   canvas.height = 64;
   const ctx = canvas.getContext("2d");
   ctx.font = "32px system-ui, sans-serif";
-  ctx.fillStyle = "#e6e6e6";
-  ctx.fillText(text, 4, 44);
+  let textX = 4;
+  if (highlighted) {
+    const width = ctx.measureText(text).width;
+    textX = 10;
+    ctx.fillStyle = ACCENT_COLOR;
+    ctx.fillRect(0, 10, width + 20, 44);
+    ctx.fillStyle = ACCENT_TEXT_COLOR;
+  } else {
+    ctx.fillStyle = "#e6e6e6";
+  }
+  ctx.fillText(text, textX, 44);
   const texture = new THREE.CanvasTexture(canvas);
   const material = new THREE.SpriteMaterial({ map: texture, depthTest: false, transparent: true });
   const sprite = new THREE.Sprite(material);
@@ -63,12 +75,32 @@ export class Frame {
     this.dragDirection = null; // last drag direction (world space), for context-menu realign
 
     this.group = new THREE.Group();
-    this.group.add(makeAxesHelper(AXIS_SIZE, 4));
-    this.group.add(makeLabelSprite(name));
+    this.axesLine = makeAxesHelper(AXIS_SIZE, 4);
+    this.labelSprite = makeLabelSprite(name, false);
+    this.group.add(this.axesLine);
+    this.group.add(this.labelSprite);
   }
 
   static autoName() {
     return `frame_${_autoId++}`;
+  }
+
+  /** Fades this frame's axes/label (e.g. while another frame is selected). */
+  setDimmed(dimmed) {
+    const opacity = dimmed ? DIM_OPACITY : 1;
+    this.axesLine.material.opacity = opacity;
+    this.labelSprite.material.opacity = opacity;
+  }
+
+  /** Toggles the accent-colored label background used to mark the selected frame. */
+  setHighlightedLabel(highlighted) {
+    const oldSprite = this.labelSprite;
+    this.labelSprite = makeLabelSprite(this.name, highlighted);
+    this.labelSprite.material.opacity = oldSprite.material.opacity;
+    this.group.remove(oldSprite);
+    oldSprite.material.map.dispose();
+    oldSprite.material.dispose();
+    this.group.add(this.labelSprite);
   }
 }
 
@@ -131,8 +163,13 @@ export class FrameManager {
     if (wasPublished) this._publishDelete(frame.name);
     this.frames.delete(frame.name);
     frame.name = newName;
-    frame.group.remove(frame.group.children[1]); // old label sprite
-    frame.group.add(makeLabelSprite(newName));
+    const oldSprite = frame.labelSprite;
+    frame.labelSprite = makeLabelSprite(newName, this.selected === frame);
+    frame.labelSprite.material.opacity = oldSprite.material.opacity;
+    frame.group.remove(oldSprite);
+    oldSprite.material.map.dispose();
+    oldSprite.material.dispose();
+    frame.group.add(frame.labelSprite);
     this.frames.set(newName, frame);
     this.tfTree.setLocalEdge(newName, frame.parentFrame, frame.local.position, frame.local.quaternion);
     if (wasPublished) this._publishSet(frame);
@@ -184,7 +221,14 @@ export class FrameManager {
 
   /** Select a frame for editing in the panel. Does not by itself show the 6-DoF gizmo. */
   select(frame) {
+    const previous = this.selected;
     this.selected = frame;
+    if (previous !== frame) {
+      const anySelected = !!frame;
+      for (const f of this.frames.values()) f.setDimmed(anySelected && f !== frame);
+      if (previous) previous.setHighlightedLabel(false);
+      if (frame) frame.setHighlightedLabel(true);
+    }
     if (!frame) {
       this._gizmoOn = false;
       this.viewer.transformControls.detach();

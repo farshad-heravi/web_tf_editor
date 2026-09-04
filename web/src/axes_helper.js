@@ -25,7 +25,7 @@ export function makeAxesHelper(size, linewidth = 3) {
   geometry.setPositions(positions);
   geometry.setColors(colors);
 
-  const material = new LineMaterial({ linewidth, vertexColors: true });
+  const material = new LineMaterial({ linewidth, vertexColors: true, transparent: true });
   material.resolution.set(window.innerWidth, window.innerHeight);
   _materials.add(material);
 
