@@ -185,6 +185,10 @@ async function main() {
         panel.render();
         shortcutHelp.render();
       }
+    } else if (e.key === "d" || e.key === "D") {
+      if (frameManager.selected) {
+        frameManager.duplicate(frameManager.selected);
+      }
     } else if (e.key === "Escape") {
       if (picker.active) {
         picker.setActive(false);

@@ -7,6 +7,7 @@ const ADD_FRAME_ROWS = [
 
 const SELECTED_ROWS = [
   { key: "G", label: "Show gizmo" },
+  { key: "D", label: "Duplicate frame" },
   { key: "Esc", label: "Deselect" },
   { label: "Right-click frame for rename, delete…" },
 ];
@@ -16,6 +17,7 @@ function gizmoRows(space) {
     { label: "Drag an arrow to move, a ring to rotate" },
     { key: "Q", label: `Space: ${space === "local" ? "Local" : "World"}` },
     { key: "G", label: "Hide gizmo" },
+    { key: "D", label: "Duplicate frame" },
     { key: "Esc", label: "Deselect" },
   ];
 }

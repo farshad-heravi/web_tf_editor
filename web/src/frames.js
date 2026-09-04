@@ -3,6 +3,7 @@ import { makeTransformStampedMessage } from "./ros.js";
 import { makeAxesHelper } from "./axes_helper.js";
 
 const AXIS_SIZE = 0.15;
+const DUPLICATE_OFFSET = AXIS_SIZE * 2;
 
 function makeLabelSprite(text) {
   const canvas = document.createElement("canvas");
@@ -215,6 +216,20 @@ export class FrameManager {
       this._publishDelete(frame.name);
     }
     this._emitChange();
+  }
+
+  /** Creates a copy of `frame`, shifted along its own X axis so it doesn't overlap the original. */
+  duplicate(frame) {
+    const finalName = Frame.autoName();
+    const offset = new THREE.Vector3(DUPLICATE_OFFSET, 0, 0).applyQuaternion(frame.local.quaternion);
+    const shiftedPosition = frame.local.position.clone().add(offset);
+    const newFrame = new Frame(finalName, frame.parentFrame, shiftedPosition, frame.local.quaternion);
+    this.frames.set(finalName, newFrame);
+    this.viewer.framesRoot.add(newFrame.group);
+    this.tfTree.setLocalEdge(finalName, frame.parentFrame, newFrame.local.position, newFrame.local.quaternion);
+    this._syncGroupTransform(newFrame);
+    this.select(newFrame);
+    return newFrame;
   }
 
   delete(frame) {
