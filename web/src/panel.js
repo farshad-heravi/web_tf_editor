@@ -62,8 +62,8 @@ export class Panel {
     sourceLabel.textContent = "Source";
     const sourceSelect = document.createElement("select");
     for (const [value, label] of [
-      ["parameter", "Parameter (robot_description)"],
       ["topic", "Topic"],
+      ["parameter", "Parameter (robot_description)"],
       ["file", "File"],
     ]) {
       const opt = document.createElement("option");
@@ -71,6 +71,7 @@ export class Panel {
       opt.textContent = label;
       sourceSelect.appendChild(opt);
     }
+    sourceSelect.value = "topic";
     sourceRow.append(sourceLabel, sourceSelect);
 
     const topicRow = document.createElement("div");

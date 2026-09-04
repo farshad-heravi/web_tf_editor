@@ -43,7 +43,6 @@ function guessFramePrefixes(descriptor) {
 
 async function main() {
   const config = await fetch("/api/config").then((r) => r.json());
-  const urdfXml = await fetch("/api/robot_description").then((r) => r.text());
 
   const canvas = document.getElementById("viewport");
   const viewer = new Viewer(canvas);
@@ -134,19 +133,7 @@ async function main() {
 
   ros.onStatusChange((connected) => panel.setConnectionStatus(connected));
 
-  if (urdfXml.trim()) {
-    try {
-      robot = await loadRobot(urdfXml, viewer.robotRoot);
-      panel.setRobotInfo(robot.robotName || "robot", Object.keys(robot.joints || {}).length);
-      panel.setRobotLoadStatus("Loaded from parameter", true);
-    } catch (err) {
-      console.error("Failed to load robot URDF:", err);
-      panel.setRobotInfo("(load failed)", 0);
-      panel.setRobotLoadStatus(err.message || String(err), false);
-    }
-  } else {
-    panel.setRobotInfo("(none)", 0);
-  }
+  loadRobotFrom({ source: "topic", topic: "/robot_description", jointStatesTopic: "/joint_states" });
 
   ros.subscribe("/tf", "tf2_msgs/TFMessage", (msg) => {
     tfTree.ingest(msg);
