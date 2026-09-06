@@ -19,6 +19,13 @@ export class TfTree {
     this._onChange.push(cb);
   }
 
+  /** Switches which frame the scene is rendered relative to (RViz-style Fixed Frame). */
+  setFixedFrame(name) {
+    if (name === this.fixedFrame || !this.frames.has(name)) return;
+    this.fixedFrame = name;
+    for (const cb of this._onChange) cb(this.list());
+  }
+
   ingest(tfMessage) {
     let changed = false;
     for (const t of tfMessage.transforms || []) {
@@ -72,8 +79,13 @@ export class TfTree {
     return Array.from(this.frames).sort();
   }
 
-  /** World pose of `frameId`, composed by walking parents up to a root (best-effort if disconnected). */
-  getWorldTransform(frameId) {
+  /**
+   * Pose of `frameId` composed by walking parents up to a root (best-effort if disconnected).
+   * This root is whatever frame terminates the chain (no incoming edge), which is independent
+   * of `fixedFrame` -- used as a common anchor so any two frames' poses can be compared even
+   * when neither is an ancestor of the other (see getRelativeTransform).
+   */
+  _poseFromRoot(frameId) {
     const chain = [];
     let current = frameId;
     let depth = 0;
@@ -96,13 +108,18 @@ export class TfTree {
     return { position, quaternion };
   }
 
-  /** Local transform of `frameId` expressed relative to `parentId`, using composed world poses. */
+  /** Local transform of `frameId` expressed relative to `parentId`, using composed root poses. */
   getRelativeTransform(frameId, parentId) {
-    const worldChild = this.getWorldTransform(frameId);
-    const worldParent = this.getWorldTransform(parentId);
+    const worldChild = this._poseFromRoot(frameId);
+    const worldParent = this._poseFromRoot(parentId);
     const parentQuatInv = worldParent.quaternion.clone().invert();
     const position = worldChild.position.clone().sub(worldParent.position).applyQuaternion(parentQuatInv);
     const quaternion = parentQuatInv.clone().multiply(worldChild.quaternion);
     return { position, quaternion };
+  }
+
+  /** Pose of `frameId` relative to the current fixed frame (RViz-style render anchor). */
+  getWorldTransform(frameId) {
+    return this.getRelativeTransform(frameId, this.fixedFrame);
   }
 }

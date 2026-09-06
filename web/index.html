@@ -10,8 +10,7 @@
   <div id="app">
     <header id="header">
       <span id="conn-status" class="status status-disconnected">disconnected</span>
-      <span id="robot-name">robot: —</span>
-      <span id="joint-count">joints: —</span>
+      <span id="robot-count">robots: 0</span>
       <button id="add-frame-btn" title="Add frame (A)">+ Frame</button>
     </header>
     <div id="viewport-container">
@@ -25,6 +24,7 @@
       <div id="robot-section" class="robot-section"></div>
       <div id="frame-list"></div>
       <div id="frame-editor" hidden></div>
+      <div id="fixed-frame-section" class="fixed-frame-section"></div>
     </aside>
   </div>
   <script src="/dist/bundle.js"></script>

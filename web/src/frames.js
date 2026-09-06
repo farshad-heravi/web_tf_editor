@@ -105,11 +105,10 @@ export class Frame {
 }
 
 export class FrameManager {
-  constructor({ viewer, ros, tfTree, fixedFrame }) {
+  constructor({ viewer, ros, tfTree }) {
     this.viewer = viewer;
     this.ros = ros;
     this.tfTree = tfTree;
-    this.fixedFrame = fixedFrame;
     this.frames = new Map();
     this.selected = null;
     this._onChange = [];
@@ -125,6 +124,10 @@ export class FrameManager {
 
   onChange(cb) {
     this._onChange.push(cb);
+  }
+
+  get fixedFrame() {
+    return this.tfTree.fixedFrame;
   }
 
   _emitChange() {

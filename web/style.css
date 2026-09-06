@@ -52,7 +52,7 @@ html, body {
 .status-connected { background: rgba(76,175,107,0.2); color: var(--ok); }
 .status-disconnected { background: rgba(224,86,86,0.2); color: var(--bad); }
 
-#robot-name, #joint-count { color: var(--text-dim); }
+#robot-count { color: var(--text-dim); }
 
 #add-frame-btn {
   margin-left: auto;
@@ -213,7 +213,7 @@ html, body {
   border-radius: 3px;
   font-size: 12px;
 }
-.robot-section .load-robot-btn {
+.robot-section .add-robot-btn {
   background: var(--bg);
   border: 1px solid var(--border);
   color: var(--text);
@@ -222,10 +222,13 @@ html, body {
   cursor: pointer;
   font-size: 12px;
 }
-.robot-section .load-robot-btn:hover { border-color: var(--accent); }
+.robot-section .add-robot-btn:hover { border-color: var(--accent); }
 .robot-load-status { font-size: 11px; color: var(--text-dim); min-height: 14px; }
 .robot-load-status.ok { color: var(--ok); }
 .robot-load-status.bad { color: var(--bad); }
+
+.robot-list { display: flex; flex-direction: column; gap: 4px; margin-top: 4px; }
+.robot-row { cursor: default; }
 
 #frame-list { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
 
@@ -241,6 +244,7 @@ html, body {
 .frame-row:hover { background: var(--bg); }
 .frame-row.selected { border-color: var(--accent); background: var(--bg); }
 .frame-row .name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.frame-row .name.bad { color: var(--bad); }
 .frame-row button { background: none; border: none; color: var(--text-dim); cursor: pointer; }
 .frame-row button:hover { color: var(--text); }
 
@@ -269,6 +273,27 @@ html, body {
   color: var(--text);
   padding: 4px 6px;
   border-radius: 3px;
+}
+
+.fixed-frame-section {
+  border-top: 1px solid var(--border);
+  margin-top: 12px;
+  padding-top: 10px;
+}
+.fixed-frame-section label {
+  display: block;
+  font-size: 11px;
+  color: var(--text-dim);
+  margin-bottom: 2px;
+}
+.fixed-frame-section select {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 4px 6px;
+  border-radius: 3px;
+  font-size: 12px;
 }
 
 .vec3-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px; }

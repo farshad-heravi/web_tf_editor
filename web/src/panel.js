@@ -34,14 +34,17 @@ function toStaticTfCommand(frame) {
 }
 
 export class Panel {
-  constructor({ frameManager, tfTree, el, onLoadRobot, onSpaceToggle }) {
+  constructor({ frameManager, tfTree, el, onAddRobot, onRemoveRobot, onSpaceToggle, onFixedFrameChange }) {
     this.frameManager = frameManager;
     this.tfTree = tfTree;
     this.el = el;
-    this.onLoadRobot = onLoadRobot;
+    this.onAddRobot = onAddRobot;
+    this.onRemoveRobot = onRemoveRobot;
     this.onSpaceToggle = onSpaceToggle;
+    this.onFixedFrameChange = onFixedFrameChange;
     this.listEl = el.querySelector("#frame-list");
     this.editorEl = el.querySelector("#frame-editor");
+    this.fixedFrameEl = el.querySelector("#fixed-frame-section");
     this.contextMenuEl = document.querySelector("#context-menu");
 
     this._buildRobotSection(el.querySelector("#robot-section"));
@@ -120,8 +123,8 @@ export class Panel {
     updateVisibility();
 
     const loadBtn = document.createElement("button");
-    loadBtn.textContent = "Load robot";
-    loadBtn.className = "load-robot-btn";
+    loadBtn.textContent = "Add robot";
+    loadBtn.className = "add-robot-btn";
 
     const status = document.createElement("div");
     status.className = "robot-load-status";
@@ -138,18 +141,22 @@ export class Panel {
           this.setRobotLoadStatus("xacro files aren't expanded in-browser — process with xacro first", false);
           return;
         }
-        this.onLoadRobot?.({ source, file });
+        this.onAddRobot?.({ source, file });
       } else if (source === "topic") {
         const topic = topicInput.value.trim() || "/robot_description";
         const jointStatesTopic = jointStatesInput.value.trim() || "/joint_states";
-        this.onLoadRobot?.({ source, topic, jointStatesTopic });
+        this.onAddRobot?.({ source, topic, jointStatesTopic });
       } else {
-        this.onLoadRobot?.({ source });
+        this.onAddRobot?.({ source });
       }
     });
 
+    const robotList = document.createElement("div");
+    robotList.className = "robot-list";
+
     this.robotStatusEl = status;
-    container.append(title, sourceRow, topicRow, jointStatesRow, fileRow, loadBtn, status);
+    this.robotListEl = robotList;
+    container.append(title, sourceRow, topicRow, jointStatesRow, fileRow, loadBtn, status, robotList);
   }
 
   setRobotLoadStatus(text, ok) {
@@ -158,9 +165,98 @@ export class Panel {
     this.robotStatusEl.className = "robot-load-status" + (ok === true ? " ok" : ok === false ? " bad" : "");
   }
 
+  /** Renders the persistent list of currently loaded robot/scene instances. */
+  setRobotList(items) {
+    this._robotItems = items;
+    this._renderFixedFrame(); // frame -> owning-robot attribution just changed
+    if (!this.robotListEl) return;
+    this.robotListEl.innerHTML = "";
+    for (const item of items) {
+      const row = document.createElement("div");
+      row.className = "frame-row robot-row";
+
+      const name = document.createElement("span");
+      name.className = "name" + (item.ok === false ? " bad" : "");
+      const detail = [item.name, item.jointCount != null ? `${item.jointCount}j` : null]
+        .filter(Boolean)
+        .join(", ");
+      name.textContent = detail ? `${item.label} (${detail})` : item.label;
+      name.title = item.status || "";
+
+      const del = document.createElement("button");
+      del.textContent = "✕";
+      del.title = "Remove";
+      del.addEventListener("click", (e) => {
+        e.stopPropagation();
+        this.onRemoveRobot?.(item.id);
+      });
+
+      row.append(name, del);
+      this.robotListEl.appendChild(row);
+    }
+  }
+
+  setRobotCount(n) {
+    const el = document.getElementById("robot-count");
+    if (el) el.textContent = `robots: ${n}`;
+  }
+
   render() {
     this._renderList();
     this._renderEditor();
+    this._renderFixedFrame();
+  }
+
+  /** Which loaded robot's URDF a frame name belongs to, or null if none claim it (e.g. a TF
+   * frame from outside this UI, an interactively-created frame, or the original fixed frame). */
+  _ownerOf(frameName) {
+    for (const item of this._robotItems || []) {
+      if (item.frameNames?.includes(frameName)) return item.label;
+    }
+    return null;
+  }
+
+  _renderFixedFrame() {
+    if (!this.fixedFrameEl) return;
+    this.fixedFrameEl.innerHTML = "";
+
+    const title = document.createElement("div");
+    title.className = "section-title";
+    title.textContent = "Global Options";
+
+    const wrap = document.createElement("div");
+    const label = document.createElement("label");
+    label.textContent = "Fixed Frame";
+    const select = document.createElement("select");
+
+    // Group frames by owning robot (per its URDF link names) so the dropdown reads like
+    // RViz's namespaced frame list; frames no loaded robot claims fall into "Other".
+    const groups = new Map();
+    for (const f of this.tfTree.list()) {
+      const groupKey = this._ownerOf(f) || "Other";
+      if (!groups.has(groupKey)) groups.set(groupKey, []);
+      groups.get(groupKey).push(f);
+    }
+    const orderedKeys = [...groups.keys()].filter((k) => k !== "Other");
+    if (groups.has("Other")) orderedKeys.push("Other");
+
+    for (const key of orderedKeys) {
+      const optgroup = document.createElement("optgroup");
+      optgroup.label = key;
+      for (const f of groups.get(key)) {
+        const opt = document.createElement("option");
+        opt.value = f;
+        opt.textContent = f;
+        opt.selected = f === this.tfTree.fixedFrame;
+        optgroup.appendChild(opt);
+      }
+      select.appendChild(optgroup);
+    }
+
+    select.addEventListener("change", () => this.onFixedFrameChange?.(select.value));
+    wrap.append(label, select);
+
+    this.fixedFrameEl.append(title, wrap);
   }
 
   _renderList() {
@@ -426,10 +522,5 @@ export class Panel {
     const el = document.getElementById("conn-status");
     el.textContent = connected ? "connected" : "disconnected";
     el.className = "status " + (connected ? "status-connected" : "status-disconnected");
-  }
-
-  setRobotInfo(name, jointCount) {
-    document.getElementById("robot-name").textContent = `robot: ${name}`;
-    document.getElementById("joint-count").textContent = `joints: ${jointCount}`;
   }
 }

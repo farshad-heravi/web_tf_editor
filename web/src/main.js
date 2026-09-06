@@ -14,7 +14,7 @@ const BASE_FRAME_CANDIDATES = ["base_footprint", "base_link"];
 // Namespaced robots often flatten their tf_prefix into frame ids instead of using a real "/"
 // (e.g. "robot_base_link" for namespace "/robot"), so an exact match against "base_link" alone
 // misses them. `prefixes` (derived from the topic the robot was loaded from, see
-// loadRobotFrom()) is tried next -- deliberately NOT a global suffix scan across every known
+// guessFramePrefixes()) is tried next -- deliberately NOT a global suffix scan across every known
 // frame: this app's /tf graph can carry several unrelated robots at once (confirmed: a bare
 // scan over all frames once matched "campetella_base_link" for a robot loaded from "/robot/..."),
 // and a wrong-robot match is worse than no match.
@@ -42,6 +42,22 @@ function guessFramePrefixes(descriptor) {
   return [`${name}_`, `${name}/`];
 }
 
+// Identifies a robot/scene instance for add-vs-replace purposes: adding the same topic or file
+// again refreshes that instance in place rather than stacking a duplicate on top of it. There's
+// only ever one "parameter" source (the backend node holds a single robot_description param), so
+// it always refers to the same instance.
+function instanceId(descriptor) {
+  if (descriptor.source === "topic") return `topic:${descriptor.topic}`;
+  if (descriptor.source === "file") return `file:${descriptor.file.name}`;
+  return "parameter";
+}
+
+function instanceLabel(descriptor) {
+  if (descriptor.source === "topic") return descriptor.topic;
+  if (descriptor.source === "file") return descriptor.file.name;
+  return "robot_description (param)";
+}
+
 async function main() {
   const config = await fetch("/api/config").then((r) => r.json());
 
@@ -51,17 +67,105 @@ async function main() {
   const tfTree = new TfTree(config.fixed_frame);
   const ros = new RosClient(config.ros_bridge_url);
 
-  let robot = null;
-  let baseFramePrefixes = [];
+  // Multiple robots/scenes can be loaded at once (e.g. a humanoid on /g1/robot_description plus
+  // a static factory scene on /factory_site/robot_description). Each instance gets its own group
+  // under viewer.robotRoot (so the picker's recursive raycast against robotRoot still covers all
+  // of them for free), its own joint_states subscription, and its own TF base-frame search --
+  // instances are positioned independently rather than moving one shared root.
+  const robots = new Map();
 
-  // Reassignable so each loaded robot can listen on its own (possibly namespaced) joint states
-  // topic instead of being stuck on the hardcoded default from startup.
-  let jointStatesSub = null;
-  function subscribeJointStates(topicName) {
-    jointStatesSub?.unsubscribe();
-    jointStatesSub = ros.subscribe(topicName, "sensor_msgs/JointState", (msg) => {
-      if (robot) applyJointStates(robot, msg);
-    });
+  function refreshRobotPanel() {
+    panel.setRobotCount(robots.size);
+    panel.setRobotList(
+      [...robots.values()].map((r) => ({
+        id: r.id,
+        label: r.label,
+        name: r.name,
+        jointCount: r.jointCount,
+        status: r.status,
+        ok: r.ok,
+        frameNames: r.frameNames,
+      }))
+    );
+  }
+
+  function removeRobotInstance(id) {
+    const instance = robots.get(id);
+    if (!instance) return;
+    instance.jointStatesSub?.unsubscribe();
+    unloadRobot(instance.group);
+    viewer.robotRoot.remove(instance.group);
+    robots.delete(id);
+    refreshRobotPanel();
+  }
+
+  async function addRobotInstance(descriptor) {
+    const id = instanceId(descriptor);
+    const label = instanceLabel(descriptor);
+    panel.setRobotLoadStatus(`Loading ${label}...`);
+
+    let xml;
+    try {
+      if (descriptor.source === "parameter") {
+        xml = await fetch("/api/robot_description").then((r) => r.text());
+      } else if (descriptor.source === "file") {
+        xml = await descriptor.file.text();
+      } else if (descriptor.source === "topic") {
+        xml = await fetchUrdfFromTopic(descriptor.topic);
+      } else {
+        throw new Error(`Unknown robot source: ${descriptor.source}`);
+      }
+      if (!xml || !xml.trim()) throw new Error("Empty URDF");
+    } catch (err) {
+      console.error(`Failed to load robot URDF (${label}):`, err);
+      panel.setRobotLoadStatus(`${label}: ${err.message || err}`, false);
+      return;
+    }
+
+    removeRobotInstance(id); // replace in place if this id is already loaded
+
+    const group = new THREE.Group();
+    viewer.robotRoot.add(group);
+
+    let robotObj;
+    try {
+      robotObj = await loadRobot(xml, group);
+    } catch (err) {
+      console.error(`Failed to parse URDF (${label}):`, err);
+      viewer.robotRoot.remove(group);
+      panel.setRobotLoadStatus(`${label}: ${err.message || err}`, false);
+      return;
+    }
+
+    // Registers this robot's link names as known frames immediately, so they're selectable
+    // (e.g. as Fixed Frame or a new frame's parent) even before /tf actually publishes them,
+    // and remembered on the instance so the panel can attribute a frame back to its robot.
+    const frameNames = Object.keys(robotObj.links || {});
+    for (const linkName of frameNames) {
+      tfTree.addFrame(linkName);
+    }
+
+    const instance = {
+      id,
+      label,
+      group,
+      robot: robotObj,
+      descriptor,
+      basePrefixes: guessFramePrefixes(descriptor),
+      frameNames,
+      name: robotObj.robotName || "robot",
+      jointCount: Object.keys(robotObj.joints || {}).length,
+      status: `Loaded from ${descriptor.source}`,
+      ok: true,
+    };
+    const jointStatesTopic = descriptor.jointStatesTopic || "/joint_states";
+    instance.jointStatesSub = ros.subscribe(jointStatesTopic, "sensor_msgs/JointState", (msg) =>
+      applyJointStates(instance.robot, msg)
+    );
+
+    robots.set(id, instance);
+    panel.setRobotLoadStatus(`Added ${label}`, true);
+    refreshRobotPanel();
   }
 
   async function fetchUrdfFromTopic(topicName, timeoutMs = 5000) {
@@ -82,44 +186,34 @@ async function main() {
     });
   }
 
-  async function loadRobotFrom(descriptor) {
-    panel.setRobotLoadStatus("Loading...");
-    try {
-      let xml;
-      if (descriptor.source === "parameter") {
-        xml = await fetch("/api/robot_description").then((r) => r.text());
-      } else if (descriptor.source === "file") {
-        xml = await descriptor.file.text();
-      } else if (descriptor.source === "topic") {
-        xml = await fetchUrdfFromTopic(descriptor.topic);
-      } else {
-        throw new Error(`Unknown robot source: ${descriptor.source}`);
+  const frameManager = new FrameManager({ viewer, ros, tfTree });
+
+  // Repositions every robot instance and frame using the current fixed frame as the render
+  // anchor. Called on every /tf tick, and once more immediately when the fixed frame is switched
+  // so the view doesn't wait for the next tick to reflect it.
+  function syncSceneToFixedFrame() {
+    for (const instance of robots.values()) {
+      const baseFrame = findBaseFrame(tfTree, tfTree.fixedFrame, instance.basePrefixes);
+      if (baseFrame) {
+        const w = tfTree.getWorldTransform(baseFrame);
+        instance.group.position.copy(w.position);
+        instance.group.quaternion.copy(w.quaternion);
       }
-
-      if (!xml || !xml.trim()) throw new Error("Empty URDF");
-
-      unloadRobot(viewer.robotRoot);
-      robot = await loadRobot(xml, viewer.robotRoot);
-      panel.setRobotInfo(robot.robotName || "robot", Object.keys(robot.joints || {}).length);
-      panel.setRobotLoadStatus(`Loaded from ${descriptor.source}`, true);
-      subscribeJointStates(descriptor.jointStatesTopic || "/joint_states");
-      baseFramePrefixes = guessFramePrefixes(descriptor);
-    } catch (err) {
-      console.error("Failed to load robot URDF:", err);
-      unloadRobot(viewer.robotRoot);
-      robot = null;
-      panel.setRobotInfo("(load failed)", 0);
-      panel.setRobotLoadStatus(err.message || String(err), false);
     }
+    frameManager.syncAll();
   }
 
-  const frameManager = new FrameManager({ viewer, ros, tfTree, fixedFrame: config.fixed_frame });
   const panel = new Panel({
     frameManager,
     tfTree,
     el: document.getElementById("app"),
-    onLoadRobot: (descriptor) => loadRobotFrom(descriptor),
+    onAddRobot: (descriptor) => addRobotInstance(descriptor),
+    onRemoveRobot: (id) => removeRobotInstance(id),
     onSpaceToggle: () => shortcutHelp.render(),
+    onFixedFrameChange: (name) => {
+      tfTree.setFixedFrame(name);
+      syncSceneToFixedFrame();
+    },
   });
   const picker = new Picker({ viewer, frameManager, hintEl: document.getElementById("hint") });
   new ViewCube({ viewer, canvas: document.getElementById("view-cube") });
@@ -135,21 +229,13 @@ async function main() {
 
   ros.onStatusChange((connected) => panel.setConnectionStatus(connected));
 
-  loadRobotFrom({ source: "topic", topic: "/robot_description", jointStatesTopic: "/joint_states" });
+  addRobotInstance({ source: "topic", topic: "/robot_description", jointStatesTopic: "/joint_states" });
 
   ros.subscribe("/tf", "tf2_msgs/TFMessage", (msg) => {
     tfTree.ingest(msg);
-    const baseFrame = findBaseFrame(tfTree, config.fixed_frame, baseFramePrefixes);
-    if (baseFrame) {
-      const w = tfTree.getWorldTransform(baseFrame);
-      viewer.robotRoot.position.copy(w.position);
-      viewer.robotRoot.quaternion.copy(w.quaternion);
-    }
-    frameManager.syncAll();
+    syncSceneToFixedFrame();
   });
   ros.subscribe("/tf_static", "tf2_msgs/TFMessage", (msg) => tfTree.ingest(msg));
-
-  subscribeJointStates("/joint_states");
 
   // -- Add-frame button + keyboard shortcut --
   const addBtn = document.getElementById("add-frame-btn");
