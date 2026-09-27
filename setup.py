@@ -49,6 +49,7 @@ setup(
     ]
     + web_dist_files(),
     install_requires=["setuptools"],
+    extras_require={"test": ["pytest"]},
     zip_safe=True,
     maintainer="Farshad Nozad Heravi",
     maintainer_email="f.n.heravi@gmail.com",
