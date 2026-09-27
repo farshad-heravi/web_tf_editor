@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 640" font-family="Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#5aaaff"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="1000" height="640" fill="#12151f"/>
+
+  <!-- Browser box -->
+  <rect x="60" y="30" width="880" height="110" rx="10" fill="#1b2130" stroke="#5aaaff" stroke-width="2"/>
+  <text x="500" y="58" fill="#eef2f7" font-size="20" font-weight="700" text-anchor="middle">Browser — three.js + urdf-loader</text>
+  <text x="500" y="84" fill="#9aa7bd" font-size="14" text-anchor="middle">Orbit / pan / zoom · pick point on mesh or empty space · drag to set direction · 6-DoF gizmo</text>
+  <text x="500" y="106" fill="#9aa7bd" font-size="14" text-anchor="middle">Side panel: frame list, reparent, pose (xyz + RPY/quaternion), publish, copy as YAML / static_transform_publisher</text>
+  <text x="500" y="128" fill="#6f7c93" font-size="12" text-anchor="middle">served by web_server_node · index.html + dist/bundle.js</text>
+
+  <!-- arrows down -->
+  <line x1="290" y1="140" x2="290" y2="195" stroke="#5aaaff" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="300" y="172" fill="#5aaaff" font-size="12">HTTP :8080</text>
+
+  <line x1="710" y1="140" x2="710" y2="195" stroke="#5aaaff" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="605" y="172" fill="#5aaaff" font-size="12">WS :9090 (rosbridge)</text>
+
+  <!-- web_server_node box -->
+  <rect x="60" y="200" width="460" height="130" rx="10" fill="#1b2130" stroke="#4c5a76" stroke-width="2"/>
+  <text x="290" y="226" fill="#eef2f7" font-size="17" font-weight="700" text-anchor="middle">web_server_node (rclpy)</text>
+  <text x="80" y="252" fill="#9aa7bd" font-size="13">/                          static UI (index.html, bundle.js)</text>
+  <text x="80" y="273" fill="#9aa7bd" font-size="13">/api/robot_description     expanded URDF XML</text>
+  <text x="80" y="294" fill="#9aa7bd" font-size="13">/api/config                 rosbridge URL, fixed frame</text>
+  <text x="80" y="315" fill="#9aa7bd" font-size="13">/package/&lt;pkg&gt;/&lt;path&gt;      mesh files (package:// resolver)</text>
+
+  <!-- rosbridge box -->
+  <rect x="560" y="200" width="380" height="130" rx="10" fill="#1b2130" stroke="#4c5a76" stroke-width="2"/>
+  <text x="750" y="226" fill="#eef2f7" font-size="17" font-weight="700" text-anchor="middle">rosbridge_websocket</text>
+  <text x="580" y="252" fill="#9aa7bd" font-size="13">sub  /joint_states, /tf, /tf_static</text>
+  <text x="580" y="273" fill="#9aa7bd" font-size="13">pub  /interactive_frame/set</text>
+  <text x="580" y="294" fill="#9aa7bd" font-size="13">pub  /interactive_frame/delete</text>
+  <text x="580" y="315" fill="#6f7c93" font-size="12">TransformStamped / String</text>
+
+  <!-- arrow rosbridge -> frame_bridge -->
+  <line x1="750" y1="330" x2="750" y2="385" stroke="#5aaaff" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- frame_bridge_node box -->
+  <rect x="560" y="390" width="380" height="90" rx="10" fill="#1b2130" stroke="#5aaaff" stroke-width="2"/>
+  <text x="750" y="420" fill="#eef2f7" font-size="17" font-weight="700" text-anchor="middle">frame_bridge_node (rclpy)</text>
+  <text x="750" y="445" fill="#9aa7bd" font-size="13" text-anchor="middle">tracks authored frames, broadcasts /tf @ 30 Hz</text>
+  <text x="750" y="464" fill="#9aa7bd" font-size="13" text-anchor="middle">republishes /interactive_frames/state (transient-local)</text>
+
+  <!-- web_server_node -> robot_state_publisher / joint_state_publisher (implied by URDF/joint states, not drawn separately, keep simple) -->
+  <line x1="290" y1="330" x2="290" y2="385" stroke="#5aaaff" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <rect x="60" y="390" width="460" height="90" rx="10" fill="#1b2130" stroke="#4c5a76" stroke-width="2"/>
+  <text x="290" y="420" fill="#eef2f7" font-size="17" font-weight="700" text-anchor="middle">robot_state_publisher + joint_state_publisher</text>
+  <text x="290" y="445" fill="#9aa7bd" font-size="13" text-anchor="middle">xacro-expanded URDF, /joint_states, /tf (odom→base, if present)</text>
+  <text x="290" y="464" fill="#9aa7bd" font-size="13" text-anchor="middle">meshes resolved from image or ./mesh_packages bind mount</text>
+
+  <!-- arrows into /tf bus -->
+  <line x1="290" y1="480" x2="480" y2="540" stroke="#5aaaff" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="750" y1="480" x2="530" y2="540" stroke="#5aaaff" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- /tf bus -->
+  <rect x="330" y="545" width="340" height="46" rx="8" fill="#22283a" stroke="#5aaaff" stroke-width="2"/>
+  <text x="500" y="574" fill="#eef2f7" font-size="16" font-weight="700" text-anchor="middle">/tf  and  /tf_static</text>
+
+  <!-- consumers -->
+  <line x1="500" y1="591" x2="500" y2="600" stroke="#5aaaff" stroke-width="2" marker-end="url(#arrow)"/>
+  <rect x="270" y="600" width="460" height="34" rx="8" fill="#1b2130" stroke="#4c5a76" stroke-width="2"/>
+  <text x="500" y="622" fill="#9aa7bd" font-size="14" text-anchor="middle">rviz2 · MoveIt · any other ROS 2 node</text>
+</svg>
