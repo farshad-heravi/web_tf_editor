@@ -32,7 +32,18 @@ function loadMeshCb(path, manager, material, onComplete) {
   } else if (ext === "dae") {
     new ColladaLoader(manager).load(
       path,
-      (collada) => onComplete(collada.scene),
+      (collada) => {
+        // DAE exports (e.g. Blender's defaults, as in robotnik_description) often embed their own
+        // lights/cameras. ColladaLoader keeps them in the returned scene, so each mesh would add
+        // e.g. a PointLight to the viewer and wash out every material, including other robots'.
+        // rviz ignores them too -- only geometry is wanted from a URDF mesh.
+        const extras = [];
+        collada.scene.traverse((obj) => {
+          if (obj.isLight || obj.isCamera) extras.push(obj);
+        });
+        extras.forEach((obj) => obj.removeFromParent());
+        onComplete(collada.scene);
+      },
       undefined,
       (err) => onComplete(null, err)
     );
