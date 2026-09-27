@@ -13,30 +13,44 @@ concurrency:
 jobs:
   ros-build-test:
     name: ros (${{ matrix.ros_distro }})
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
+    # Official ROS images: same OS/package set as the buildfarm for each distro, and no apt setup
+    # to go wrong. No npm on purpose: web/dist/ is committed, and the buildfarm builds offline.
+    container: ros:${{ matrix.ros_distro }}
     strategy:
       fail-fast: false
       matrix:
         include:
           - ros_distro: humble
-            os: ubuntu-22.04
           - ros_distro: jazzy
-            os: ubuntu-24.04
+          # turtlebot3_manipulation_description (default robot) isn't released for rolling.
           - ros_distro: rolling
-            os: ubuntu-24.04
+            skip_keys: turtlebot3_manipulation_description
+    defaults:
+      run:
+        shell: bash
+        working-directory: ros_ws
     steps:
       - uses: actions/checkout@v4
-
-      # No npm here on purpose: web/dist/ is committed, and the ROS buildfarm builds offline from
-      # the source tag, so this job checks the package builds exactly the way the buildfarm will.
-      - uses: ros-tooling/setup-ros@v0.7
         with:
-          required-ros-distributions: ${{ matrix.ros_distro }}
+          path: ros_ws/src/web_tf_editor
 
-      - uses: ros-tooling/action-ros-ci@v0.4
-        with:
-          package-name: web_tf_editor
-          target-ros2-distro: ${{ matrix.ros_distro }}
+      - name: Install dependencies
+        run: |
+          apt-get update
+          rosdep update --rosdistro ${{ matrix.ros_distro }}
+          rosdep install --from-paths src --ignore-src -y --skip-keys "${{ matrix.skip_keys }}"
+
+      - name: Build
+        run: |
+          source /opt/ros/${{ matrix.ros_distro }}/setup.bash
+          colcon build --event-handlers console_cohesion+
+
+      - name: Test
+        run: |
+          source /opt/ros/${{ matrix.ros_distro }}/setup.bash
+          colcon test --event-handlers console_direct+
+          colcon test-result --verbose
 
   web-build:
     name: web bundle is up to date

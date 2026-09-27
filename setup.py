@@ -56,7 +56,6 @@ setup(
         "Browser-based rviz-like viewer for authoring interactive TF frames over rosbridge."
     ),
     license="Apache-2.0",
-    tests_require=["pytest"],
     entry_points={
         "console_scripts": [
             "web_server_node = web_tf_editor.web_server_node:main",
