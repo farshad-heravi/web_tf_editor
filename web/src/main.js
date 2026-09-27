@@ -31,6 +31,24 @@ function findBaseFrame(tfTree, fixedFrame, prefixes = []) {
   return null;
 }
 
+// The URDF's root link: the one link that isn't any joint's child. urdf-loader merges it into
+// the returned robot object itself, so every other link's parent is a URDFJoint.
+function rootLinkName(robotObj) {
+  const links = robotObj.links || {};
+  return Object.keys(links).find((name) => !links[name].parent?.isURDFJoint) || null;
+}
+
+// Where to anchor an instance's group, RViz RobotModel-style: its own URDF root link, whenever
+// /tf actually places that link (or it is the fixed frame itself, i.e. identity). This is exact
+// and can't pick up another robot's frame. The base_footprint/base_link heuristic in
+// findBaseFrame() is only the fallback for URDFs whose root link isn't on /tf; tried first, its
+// bare "base_link" match snapped every instance onto whichever robot publishes "base_link".
+function findAnchorFrame(tfTree, instance) {
+  const root = instance.rootLink;
+  if (root && (root === tfTree.fixedFrame || tfTree.hasParent(root))) return root;
+  return findBaseFrame(tfTree, tfTree.fixedFrame, instance.basePrefixes);
+}
+
 // Best-effort tf_prefix guesses for a robot loaded from `topic` (e.g. "/robot/robot_description"
 // -> namespace "/robot" -> try "robot_" and "robot/", covering both flattened and real-namespace
 // conventions). Returns [] for parameter/file loads, which have no known namespace.
@@ -151,6 +169,7 @@ async function main() {
       group,
       robot: robotObj,
       descriptor,
+      rootLink: rootLinkName(robotObj),
       basePrefixes: guessFramePrefixes(descriptor),
       frameNames,
       name: robotObj.robotName || "robot",
@@ -193,7 +212,7 @@ async function main() {
   // so the view doesn't wait for the next tick to reflect it.
   function syncSceneToFixedFrame() {
     for (const instance of robots.values()) {
-      const baseFrame = findBaseFrame(tfTree, tfTree.fixedFrame, instance.basePrefixes);
+      const baseFrame = findAnchorFrame(tfTree, instance);
       if (baseFrame) {
         const w = tfTree.getWorldTransform(baseFrame);
         instance.group.position.copy(w.position);

@@ -75,6 +75,11 @@ export class TfTree {
     }
   }
 
+  /** True if /tf (or a local edge) has actually placed `name` under some parent. */
+  hasParent(name) {
+    return this._edges.has(name);
+  }
+
   list() {
     return Array.from(this.frames).sort();
   }
