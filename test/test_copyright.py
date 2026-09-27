@@ -11,3 +11,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+from ament_copyright.main import main
+import pytest
+
+
+@pytest.mark.copyright
+@pytest.mark.linter
+def test_copyright():
+    rc = main(argv=["launch", "setup.py", "test", "web_tf_editor"])
+    assert rc == 0, "Found errors"

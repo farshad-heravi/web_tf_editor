@@ -3,18 +3,34 @@
 <package format="3">
   <name>web_tf_editor</name>
   <version>0.1.1</version>
-  <description>Browser-based rviz-like viewer for authoring interactive TF frames over rosbridge.</description>
+  <description>
+    Browser-based, RViz-like 3D viewer for authoring TF frames interactively. Renders the robot
+    URDF in a web page, lets you place and drag frames with a 6-DoF gizmo, and broadcasts them
+    on /tf through rosbridge.
+  </description>
   <maintainer email="f.n.heravi@gmail.com">Farshad Nozad Heravi</maintainer>
   <license>Apache-2.0</license>
+  <!-- Third-party JavaScript bundled into web/dist/bundle.js; see web/dist/THIRD_PARTY_NOTICES.txt -->
+  <license>MIT</license>
+  <license>BSD-2-Clause</license>
 
-  <depend>rclpy</depend>
-  <depend>tf2_ros</depend>
-  <depend>geometry_msgs</depend>
-  <depend>std_msgs</depend>
-  <depend>ament_index_python</depend>
-  <exec_depend>rosbridge_suite</exec_depend>
+  <url type="website">https://github.com/farshad-heravi/web_tf_editor</url>
+  <url type="repository">https://github.com/farshad-heravi/web_tf_editor</url>
+  <url type="bugtracker">https://github.com/farshad-heravi/web_tf_editor/issues</url>
+
+  <author email="f.n.heravi@gmail.com">Farshad Nozad Heravi</author>
+
+  <exec_depend>ament_index_python</exec_depend>
+  <exec_depend>geometry_msgs</exec_depend>
+  <exec_depend>launch</exec_depend>
+  <exec_depend>launch_ros</exec_depend>
+  <exec_depend>rclpy</exec_depend>
   <exec_depend>robot_state_publisher</exec_depend>
   <exec_depend>joint_state_publisher</exec_depend>
+  <exec_depend>rosbridge_server</exec_depend>
+  <exec_depend>std_msgs</exec_depend>
+  <exec_depend>tf2_ros_py</exec_depend>
+  <exec_depend>turtlebot3_manipulation_description</exec_depend>
   <exec_depend>xacro</exec_depend>
 
   <test_depend>ament_copyright</test_depend>

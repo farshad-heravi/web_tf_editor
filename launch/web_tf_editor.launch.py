@@ -1,4 +1,19 @@
-"""Launch file for web_tf_editor.
+# Copyright 2026 Farshad Nozad Heravi
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+"""
+Launch file for web_tf_editor.
 
 Starts:
 - robot_state_publisher + joint_state_publisher (GUI-less, publishing default joint states)
@@ -12,12 +27,12 @@ Override with: ros2 launch web_tf_editor web_tf_editor.launch.py urdf:=/path/to/
 
 import os
 
-import xacro
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, OpaqueFunction
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
+import xacro
 
 
 def _default_urdf():
@@ -39,6 +54,7 @@ def _launch_setup(context, *args, **kwargs):
     urdf_path = LaunchConfiguration("urdf").perform(context)
     fixed_frame = LaunchConfiguration("fixed_frame").perform(context)
     http_port = int(LaunchConfiguration("http_port").perform(context))
+    bind_address = LaunchConfiguration("bind_address").perform(context)
     ros_bridge_port = int(LaunchConfiguration("ros_bridge_port").perform(context))
     web_root = LaunchConfiguration("web_root").perform(context)
     mesh_search_paths = LaunchConfiguration("mesh_search_paths").perform(context)
@@ -91,6 +107,7 @@ def _launch_setup(context, *args, **kwargs):
             parameters=[
                 {
                     "http_port": http_port,
+                    "bind_address": bind_address,
                     "ros_bridge_url": ros_bridge_public_url,
                     "fixed_frame": fixed_frame,
                     "robot_description": robot_description,
@@ -115,6 +132,7 @@ def generate_launch_description():
             DeclareLaunchArgument("urdf", default_value=_default_urdf()),
             DeclareLaunchArgument("fixed_frame", default_value="odom"),
             DeclareLaunchArgument("http_port", default_value="8080"),
+            DeclareLaunchArgument("bind_address", default_value="0.0.0.0"),
             DeclareLaunchArgument("ros_bridge_port", default_value="9090"),
             DeclareLaunchArgument("web_root", default_value=""),
             DeclareLaunchArgument("mesh_search_paths", default_value=""),

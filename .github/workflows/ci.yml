@@ -27,18 +27,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-
-      # colcon packages web/dist/* into share/ via setup.py's web_dist_files(), so it must
-      # exist before colcon build runs -- mirrors the web-build stage in the Dockerfile.
-      - name: Build web bundle
-        working-directory: web
-        run: |
-          npm ci
-          npm run build
-
+      # No npm here on purpose: web/dist/ is committed, and the ROS buildfarm builds offline from
+      # the source tag, so this job checks the package builds exactly the way the buildfarm will.
       - uses: ros-tooling/setup-ros@v0.7
         with:
           required-ros-distributions: ${{ matrix.ros_distro }}
@@ -47,12 +37,9 @@ jobs:
         with:
           package-name: web_tf_editor
           target-ros2-distro: ${{ matrix.ros_distro }}
-          # Repo is private -- action-ros-ci clones it fresh itself rather than reusing the
-          # actions/checkout copy, so it needs its own auth.
-          import-token: ${{ secrets.GITHUB_TOKEN }}
 
   web-build:
-    name: web bundle (lint-speed check)
+    name: web bundle is up to date
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -65,3 +52,13 @@ jobs:
         run: |
           npm ci
           npm run build
+
+      # web/dist/ is committed (the buildfarm has no npm), so it must match what web/src builds.
+      - name: Check committed web/dist matches web/src
+        run: |
+          git status --porcelain web/dist
+          git diff --exit-code web/dist || {
+            echo "::error::web/dist is stale: run 'cd web && npm ci && npm run build' and commit web/dist."
+            exit 1
+          }
+          test -z "$(git status --porcelain web/dist)"

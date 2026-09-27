@@ -1,4 +1,19 @@
-"""HTTP server node: serves the web UI bundle, expanded URDF, config, and package:// mesh files.
+# Copyright 2026 Farshad Nozad Heravi
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+"""
+HTTP server node: serves the web UI bundle, expanded URDF, config, and package:// mesh files.
 
 package:// mesh URIs resolve first against this process's own ROS environment
 (get_package_share_directory), then against `mesh_search_paths` (colon-separated directories,
@@ -6,14 +21,14 @@ each searched as `<dir>/<pkg_name>/...`) -- so meshes for a robot whose descript
 installed in this container/environment can be bind-mounted at runtime without a rebuild.
 """
 
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 import os
 import threading
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import unquote, urlsplit
 
+from ament_index_python.packages import get_package_share_directory, PackageNotFoundError
 import rclpy
-from ament_index_python.packages import PackageNotFoundError, get_package_share_directory
 from rclpy.node import Node
 
 _CONTENT_TYPES = {
@@ -58,7 +73,8 @@ class _Handler(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
     def _send_json(self, status: int, obj):
-        self._send_bytes(status, json.dumps(obj).encode("utf-8"), "application/json; charset=utf-8")
+        body = json.dumps(obj).encode("utf-8")
+        self._send_bytes(status, body, "application/json; charset=utf-8")
 
     def _send_file(self, path: str):
         try:
@@ -84,7 +100,9 @@ class _Handler(BaseHTTPRequestHandler):
                     "ros_bridge_url": self.node.get_parameter("ros_bridge_url")
                     .get_parameter_value()
                     .string_value,
-                    "fixed_frame": self.node.get_parameter("fixed_frame").get_parameter_value().string_value,
+                    "fixed_frame": self.node.get_parameter("fixed_frame")
+                    .get_parameter_value()
+                    .string_value,
                 },
             )
             return
@@ -97,12 +115,16 @@ class _Handler(BaseHTTPRequestHandler):
 
     @staticmethod
     def _safe_join(root: str, rel_path: str):
-        """Join `rel_path` under `root` and reject any escape (`..`, absolute paths), purely
-        lexically. Deliberately does NOT resolve symlinks (unlike realpath-based containment
-        checks): colcon's --symlink-install serves this package's own web/ as symlinks back into
-        the source tree, and package share dirs can be symlinked too, so a realpath comparison
-        would reject legitimate files. Traversal is still caught because it's blocked by the
-        normalized-path prefix check before any symlink is ever followed by open()."""
+        """
+        Join `rel_path` under `root` and reject any escape (`..`, absolute paths).
+
+        The check is purely lexical. Deliberately does NOT resolve symlinks (unlike
+        realpath-based containment checks): colcon's --symlink-install serves this package's
+        own web/ as symlinks back into the source tree, and package share dirs can be symlinked
+        too, so a realpath comparison would reject legitimate files. Traversal is still caught
+        because it's blocked by the normalized-path prefix check before any symlink is ever
+        followed by open().
+        """
         root_norm = os.path.normpath(root)
         candidate = os.path.normpath(os.path.join(root_norm, rel_path.lstrip("/")))
         if candidate != root_norm and not candidate.startswith(root_norm + os.sep):
@@ -159,17 +181,17 @@ class WebServerNode(Node):
         super().__init__("web_server_node")
 
         self.declare_parameter("http_port", 8080)
+        self.declare_parameter("bind_address", "0.0.0.0")
         self.declare_parameter("ros_bridge_url", "ws://localhost:9090")
         self.declare_parameter("fixed_frame", "odom")
         self.declare_parameter("robot_description", "")
         self.declare_parameter("web_root", "")
         self.declare_parameter("mesh_search_paths", "")
 
-        mesh_search_paths = tuple(
-            p
-            for p in self.get_parameter("mesh_search_paths").get_parameter_value().string_value.split(":")
-            if p
+        mesh_search_paths_param = (
+            self.get_parameter("mesh_search_paths").get_parameter_value().string_value
         )
+        mesh_search_paths = tuple(p for p in mesh_search_paths_param.split(":") if p)
 
         web_root = self.get_parameter("web_root").get_parameter_value().string_value
         if not web_root:
@@ -180,17 +202,18 @@ class WebServerNode(Node):
             raise RuntimeError(f"web root does not exist: {web_root}")
 
         port = self.get_parameter("http_port").get_parameter_value().integer_value
+        bind_address = self.get_parameter("bind_address").get_parameter_value().string_value
 
         handler = type(
             "BoundHandler",
             (_Handler,),
             {"web_root": web_root, "node": self, "mesh_search_paths": mesh_search_paths},
         )
-        self._httpd = ThreadingHTTPServer(("0.0.0.0", port), handler)
+        self._httpd = ThreadingHTTPServer((bind_address, port), handler)
 
         self._thread = threading.Thread(target=self._httpd.serve_forever, daemon=True)
         self._thread.start()
-        self.get_logger().info(f"Serving {web_root} on http://0.0.0.0:{port}")
+        self.get_logger().info(f"Serving {web_root} on http://{bind_address}:{port}")
 
     def destroy_node(self):
         self._httpd.shutdown()

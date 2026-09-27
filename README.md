@@ -57,13 +57,12 @@ The browser talks to the ROS 2 graph over two channels: plain HTTP for the stati
 expanded URDF, and mesh files (`web_server_node`), and a rosbridge WebSocket for live topics.
 Authored frames are sent to `frame_bridge_node`, which is the single source of truth for
 `/tf` — it broadcasts all authored frames at 30 Hz and republishes them as a transient-local
-state topic so a page reload restores them. See [`PLAN.md`](PLAN.md) for the full design
-writeup (routes, message contracts, frontend module responsibilities).
+state topic so a page reload restores them.
 
 ## Quick start
 
 Requires a sourced ROS 2 Jazzy install on the host, plus this package's dependencies
-(`rosbridge_suite`, `robot_state_publisher`, `joint_state_publisher`, `xacro`, and, for the
+(`rosbridge_server`, `robot_state_publisher`, `joint_state_publisher`, `xacro`, and, for the
 default robot, `turtlebot3_manipulation_description`).
 
 ```bash
@@ -75,8 +74,7 @@ cd ~/ros2_ws
 # install missing ROS dependencies
 rosdep install --from-paths src --ignore-src -r -y
 
-# build the front end, then the ROS package (setup.py bundles web/dist into the install share dir)
-(cd src/web_tf_editor/web && npm install && npm run build)
+# build (the pre-built front end in web/dist/ is committed, so no npm is needed here)
 colcon build --symlink-install --packages-select web_tf_editor
 source install/setup.bash
 
@@ -85,7 +83,9 @@ ros2 launch web_tf_editor web_tf_editor.launch.py
 
 Then open **http://localhost:8080**. rosbridge listens on `ws://localhost:9090`. Both ports are
 launch arguments (`http_port:=`, `ros_bridge_port:=`) if you need to avoid a clash with something
-else already running on the host.
+else already running on the host. The web server listens on all interfaces by default and serves
+files from any installed package's share directory; pass `bind_address:=127.0.0.1` to keep it
+local to the machine.
 
 Default robot is TurtleBot3 + OpenMANIPULATOR-X. To use a different robot:
 
@@ -167,6 +167,11 @@ ros2 launch web_tf_editor web_tf_editor.launch.py \
 With `web_root` pointed at the source tree, `web_server_node` serves the freshly built
 `dist/bundle.js` on the next page refresh — no relaunch needed.
 
+`web/dist/` is committed because the ROS buildfarm builds release packages offline, without npm.
+After changing anything under `web/src/`, run `npm run build` (minified, no sourcemap, and it
+regenerates `dist/THIRD_PARTY_NOTICES.txt`) and commit `web/dist/` along with the source. CI
+fails if the two are out of sync.
+
 ## Docker
 
 `Dockerfile`/`docker-compose.yml` are kept for sandboxed testing (e.g. CI, or trying the UI on a
@@ -177,4 +182,6 @@ avoids that entirely.
 
 ## License
 
-Apache License 2.0 — see [`LICENSE`](LICENSE).
+Apache License 2.0 — see [`LICENSE`](LICENSE). The bundled front end includes third-party
+JavaScript under MIT, BSD-2-Clause and Apache-2.0 licenses (three.js, roslib, urdf-loader and
+their dependencies) — see [`web/dist/THIRD_PARTY_NOTICES.txt`](web/dist/THIRD_PARTY_NOTICES.txt).
