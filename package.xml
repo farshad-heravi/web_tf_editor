@@ -2,7 +2,7 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>web_tf_editor</name>
-  <version>0.1.1</version>
+  <version>0.2.0</version>
   <description>
     Browser-based, RViz-like 3D viewer for authoring TF frames interactively. Renders the robot
     URDF in a web page, lets you place and drag frames with a 6-DoF gizmo, and broadcasts them
